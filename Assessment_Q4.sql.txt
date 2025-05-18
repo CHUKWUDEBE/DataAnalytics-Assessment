@@ -1,0 +1,29 @@
+USE adashi_staging;
+
+-- Q4: Estimate Customer Lifetime Value (CLV)
+WITH total_tx AS (
+    SELECT 
+        owner_id,
+        COUNT(*) AS total_transactions,
+        SUM(confirmed_amount) / 100 AS total_value,
+        AVG(confirmed_amount) / 100 AS avg_tx_value
+    FROM savings_savingsaccount
+    GROUP BY owner_id
+),
+tenure AS (
+    SELECT 
+        id,
+        TIMESTAMPDIFF(MONTH, date_joined, CURDATE()) AS tenure_months
+    FROM users_customuser
+)
+SELECT 
+    u.id AS customer_id,
+    CONCAT(u.first_name, ' ', u.last_name) AS name,
+    t.tenure_months,
+    tx.total_transactions,
+    ROUND((tx.total_transactions / t.tenure_months) * 12 * (tx.total_value * 0.001 / tx.total_transactions), 2) AS estimated_clv
+FROM users_customuser u
+JOIN total_tx tx ON u.id = tx.owner_id
+JOIN tenure t ON u.id = t.id
+WHERE t.tenure_months > 0
+ORDER BY estimated_clv DESC;
